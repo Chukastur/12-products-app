@@ -4,7 +4,7 @@ import { useThemeColor } from "../hooks/use-theme-color";
 import { ThemedText } from "./themed-text";
 
 interface Props extends PressableProps {
-  title: string;
+  title?: string;
   children: string;
   icon?: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
