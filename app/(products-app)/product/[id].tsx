@@ -1,30 +1,50 @@
 import { Size } from "@/core/products/interfaces/product.interface";
 import ProductsImages from "@/presentation/products/components/ProductsImages";
 import { useProduct } from "@/presentation/products/hooks/useProduct";
+import { useCameraStore } from "@/presentation/store/useCameraStore";
+import MenuIconButton from "@/presentation/theme/components/MenuIconButton";
 import { ThemedView } from "@/presentation/theme/components/themed-view";
 import ThemedButton from "@/presentation/theme/components/ThemedButton";
 import ThemedButtonGroup from "@/presentation/theme/components/ThemedButtonGroup";
 import ThemedTextInput from "@/presentation/theme/components/ThemedTextInput";
-import { Ionicons } from "@expo/vector-icons";
-import { Redirect, useLocalSearchParams, useNavigation } from "expo-router";
+import {
+  Redirect,
+  router,
+  useLocalSearchParams,
+  useNavigation,
+} from "expo-router";
 import { Formik } from "formik";
 import React, { useEffect } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
   ScrollView,
   View,
 } from "react-native";
 
 const ProductScreen = () => {
+  const { selectedImages, clearImages } = useCameraStore();
+
   const navigation = useNavigation();
   const { id } = useLocalSearchParams();
   const { productQuery, productMutation } = useProduct(`${id}`);
 
   useEffect(() => {
+    return () => {
+      clearImages;
+    };
+  }, []);
+
+  useEffect(() => {
     navigation.setOptions({
-      headerRight: () => <Ionicons name="camera-outline" size={25} />,
+      headerRight: () => (
+        <MenuIconButton
+          onPress={() => router.push("/camera")}
+          icon="camera-outline"
+        />
+      ),
     });
   }, []);
 
@@ -50,13 +70,30 @@ const ProductScreen = () => {
   const product = productQuery.data!;
 
   return (
-    <Formik initialValues={product} onSubmit={productMutation.mutate}>
+    <Formik
+      initialValues={product}
+      onSubmit={(product) =>
+        productMutation.mutate({
+          ...product,
+          images: [...product.images, ...selectedImages],
+        })
+      }
+    >
       {({ values, handleSubmit, handleChange, setFieldValue }) => (
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <ScrollView>
-            <ProductsImages images={values.images} />
+          <ScrollView
+            refreshControl={
+              <RefreshControl
+                refreshing={productQuery.isFetching}
+                onRefresh={async () => {
+                  await productQuery.refetch();
+                }}
+              />
+            }
+          >
+            <ProductsImages images={[...product.images, ...selectedImages]} />
             <ThemedView style={{ marginHorizontal: 10, marginTop: 20 }}>
               <ThemedTextInput
                 placeholder="Título"
